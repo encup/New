@@ -1,0 +1,12 @@
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
+
+const file = fs.createWriteStream(path.join(__dirname, 'yt-dlp'));
+https.get('https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp', function (response) {
+  response.pipe(file);
+  file.on('finish', function () {
+    fs.chmodSync(path.join(__dirname, 'yt-dlp'), 0o755);
+    console.log('yt-dlp downloaded and made executable');
+  });
+});
