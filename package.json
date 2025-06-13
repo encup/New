@@ -4,7 +4,7 @@
   "description": "yt-dlp api for mp3/mp4",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+  "start": "node bin/yt-dlp-install.js && node index.js"
   },
 "dependencies": {
   "youtube-dl-exec": "^1.1.1",
