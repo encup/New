@@ -11,6 +11,6 @@
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
     "form-data": "^4.0.0",
-    "yt-dlp-wrap": "https://github.com/ghostiam/yt-dlp-wrap"
+    "yt-dlp-wrap": "1.0.6"
   }
 }
