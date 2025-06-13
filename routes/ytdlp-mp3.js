@@ -9,44 +9,54 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   const url = req.query.url;
-  if (!url) return res.status(400).json({ status: false, message: 'URL tidak ditemukan' });
+  if (!url) {
+    return res.status(400).json({ status: false, message: 'URL tidak ditemukan' });
+  }
 
-  const outputDir = tmp.dirSync();
-  const outputTemplate = path.join(outputDir.name, '%(title)s.%(ext)s');
+  const tempDir = tmp.dirSync();
+  const outputTemplate = path.join(tempDir.name, '%(title)s.%(ext)s');
   const ytdlpPath = path.join(__dirname, '..', 'yt-dlp');
 
-  let stdoutLog = '', stderrLog = '';
-
-  const ytdlp = spawn(ytdlpPath, [
-    '--ffmpeg-location', ffmpegPath,
+  const args = [
     '-x',
     '--audio-format', 'mp3',
+    '--ffmpeg-location', ffmpegPath,
     '-o', outputTemplate,
-    url
-  ]);
+    url,
+  ];
 
-  ytdlp.stdout.on('data', data => stdoutLog += data.toString());
-  ytdlp.stderr.on('data', data => stderrLog += data.toString());
+  const ytdlp = spawn(ytdlpPath, args);
 
-  ytdlp.on('close', code => {
-    try {
-      const files = fs.readdirSync(outputDir.name).filter(f => f.endsWith('.mp3'));
-      if (files.length === 0) {
-        return res.status(500).json({
-          status: false,
-          message: 'File audio tidak ditemukan setelah proses download.',
-          debug: { stdout: stdoutLog, stderr: stderrLog }
-        });
-      }
+  let stderr = '';
+  let stdout = '';
 
-      const filePath = path.join(outputDir.name, files[0]);
-      res.download(filePath, 'audio.mp3', err => {
-        fs.unlinkSync(filePath);
-        if (err) console.error('Download error:', err);
+  ytdlp.stderr.on('data', (data) => stderr += data.toString());
+  ytdlp.stdout?.on('data', (data) => stdout += data.toString());
+
+  ytdlp.on('close', async (code) => {
+    if (code !== 0) {
+      return res.status(500).json({
+        status: false,
+        message: 'Gagal download audio',
+        debug: { stderr, stdout }
       });
-    } catch (err) {
-      return res.status(500).json({ status: false, message: 'Terjadi kesalahan saat memproses file', error: err.message });
     }
+
+    // Cari file MP3 di folder temp
+    const files = fs.readdirSync(tempDir.name).filter(file => file.endsWith('.mp3'));
+    if (files.length === 0) {
+      return res.status(500).json({
+        status: false,
+        message: 'File audio tidak ditemukan setelah proses download.',
+        debug: { outputDir: tempDir.name, stderr, stdout }
+      });
+    }
+
+    const filePath = path.join(tempDir.name, files[0]);
+    res.download(filePath, files[0], (err) => {
+      fs.rmSync(tempDir.name, { recursive: true, force: true });
+      if (err) console.error('Error saat mengirim file:', err);
+    });
   });
 });
 
