@@ -1,10 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const YtDlpWrap = require("yt-dlp-wrap"); // FIXED: default import
+const ytdlpModule = require("yt-dlp-wrap");
+const YtDlpWrap = ytdlpModule.default || ytdlpModule; // ✅ perbaikan
+
 const fs = require("fs");
 const path = require("path");
 
-const ytdlp = new YtDlpWrap(); // gunakan path ke yt-dlp kalau perlu
+const ytdlp = new YtDlpWrap(); // atau beri path: new YtDlpWrap("/usr/bin/yt-dlp")
 
 const outputDir = path.join(__dirname, "..", "temp");
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
@@ -34,7 +36,7 @@ router.get("/", async (req, res) => {
     }
 
     res.download(expectedFilePath, "audio.mp3", (err) => {
-      fs.unlink(expectedFilePath, () => {}); // hapus setelah dikirim
+      fs.unlink(expectedFilePath, () => {});
       if (err) console.error("Gagal mengirim file:", err);
     });
 
