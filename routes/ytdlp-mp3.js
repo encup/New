@@ -4,33 +4,44 @@ const { YtDlpWrap } = require("yt-dlp-wrap");
 const fs = require("fs");
 const path = require("path");
 
-const ytdlp = new YtDlpWrap();
-const outputDir = path.join(__dirname, "..", "temp");
-if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+const ytdlp = new YtDlpWrap(); // Gunakan path jika perlu: new YtDlpWrap("/usr/local/bin/yt-dlp")
 
-// GET /ytdlp-mp3?url=...
+const outputDir = path.join(__dirname, "..", "temp");
+if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+// GET /ytdlp-mp3?url=https://...
 router.get("/", async (req, res) => {
   const url = req.query.url;
-  if (!url) return res.status(400).json({ status: false, message: "URL tidak ditemukan" });
 
-  const outputFile = path.join(outputDir, `audio-${Date.now()}.mp3`);
+  if (!url || !/^https?:\/\/\S+/.test(url)) {
+    return res.status(400).json({ status: false, message: "URL tidak valid atau tidak ditemukan" });
+  }
+
+  const timestamp = Date.now();
+  const outputTemplate = path.join(outputDir, `audio-${timestamp}.%(ext)s`);
+  const expectedFilePath = path.join(outputDir, `audio-${timestamp}.mp3`);
 
   try {
-    await ytdlp.exec([
+    await ytdlp.execPromise([
       url,
       "-f", "bestaudio",
       "-x",
       "--audio-format", "mp3",
-      "-o", outputFile
+      "-o", outputTemplate
     ]);
 
-    res.download(outputFile, "audio.mp3", (err) => {
-      if (err) console.error("Error sending file:", err);
-      fs.unlink(outputFile, () => {}); // Hapus setelah dikirim
+    if (!fs.existsSync(expectedFilePath)) {
+      return res.status(500).json({ status: false, message: "Gagal memproses file MP3" });
+    }
+
+    res.download(expectedFilePath, "audio.mp3", (err) => {
+      fs.unlink(expectedFilePath, () => {}); // hapus setelah dikirim
+      if (err) console.error("Gagal mengirim file:", err);
     });
+
   } catch (error) {
     console.error("YTDLP Error:", error);
-    res.status(500).json({ status: false, message: "Gagal download audio" });
+    return res.status(500).json({ status: false, message: "Gagal download audio" });
   }
 });
 
