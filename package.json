@@ -4,13 +4,12 @@
   "description": "yt-dlp api for mp3/mp4",
   "main": "index.js",
   "scripts": {
-  "start": "node bin/yt-dlp-install.js && node index.js"
+    "start": "node bin/yt-dlp-install.js && node index.js"
   },
-"dependencies": {
-  "youtube-dl-exec": "^1.1.1",
-  "axios": "^1.6.0",
-  "express": "^4.18.2",
-  "express-fileupload": "^1.4.0",
-  "form-data": "^4.0.0"
-}
+  "dependencies": {
+    "axios": "^1.6.0",
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.0",
+    "form-data": "^4.0.0"
+  }
 }
