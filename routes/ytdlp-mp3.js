@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const youtubedl = require('youtube-dl-exec');
+const { spawn } = require('child_process');
 
 const outputDir = path.join(__dirname, '..', 'temp');
-if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
+const ytdlpPath = path.join(__dirname, '..', 'bin', 'yt-dlp');
+
+if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
 router.get('/', async (req, res) => {
   const url = req.query.url;
@@ -14,30 +16,30 @@ router.get('/', async (req, res) => {
   const fileName = `audio-${Date.now()}.mp3`;
   const outputPath = path.join(outputDir, fileName);
 
-  try {
-    const process = youtubedl.raw(
-      url,
-      {
-        extractAudio: true,
-        audioFormat: 'mp3',
-        output: outputPath
-      }
-    );
+  const args = [
+    url,
+    '-f', 'bestaudio',
+    '-x',
+    '--audio-format', 'mp3',
+    '-o', outputPath
+  ];
 
-    process.stdout.on('data', d => console.log('stdout:', d.toString()));
-    process.stderr.on('data', d => console.error('stderr:', d.toString()));
+  const ytdlp = spawn(ytdlpPath, args);
 
-    process.on('close', () => {
-      res.download(outputPath, fileName, err => {
+  ytdlp.stderr.on('data', data => console.error(data.toString()));
+  ytdlp.stdout.on('data', data => console.log(data.toString()));
+
+  ytdlp.on('close', code => {
+    if (code === 0) {
+      res.download(outputPath, 'audio.mp3', err => {
         if (err) console.error(err);
         fs.unlink(outputPath, () => {});
       });
-    });
-
-  } catch (err) {
-    console.error('Error download:', err);
-    res.status(500).json({ status: false, message: 'Gagal download audio', error: err.message });
-  }
+    } else {
+      console.error(`yt-dlp exited with code ${code}`);
+      res.status(500).json({ status: false, message: 'Gagal download audio' });
+    }
+  });
 });
 
 module.exports = router;
