@@ -1,15 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const { YtDlpWrap } = require("yt-dlp-wrap");
+const YtDlpWrap = require("yt-dlp-wrap"); // FIXED: default import
 const fs = require("fs");
 const path = require("path");
 
-const ytdlp = new YtDlpWrap(); // Gunakan path jika perlu: new YtDlpWrap("/usr/local/bin/yt-dlp")
+const ytdlp = new YtDlpWrap(); // gunakan path ke yt-dlp kalau perlu
 
 const outputDir = path.join(__dirname, "..", "temp");
 if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-// GET /ytdlp-mp3?url=https://...
 router.get("/", async (req, res) => {
   const url = req.query.url;
 
