@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
 
   const ytdlpPath = path.join(__dirname, '..', 'yt-dlp');
 
+  let stderrData = '';
   const ytdlp = spawn(ytdlpPath, [
     '-f', 'bestaudio',
     '-x',
@@ -25,27 +26,22 @@ router.get('/', async (req, res) => {
     url,
   ]);
 
-  let stderrData = '';
   ytdlp.stderr.on('data', (data) => {
     stderrData += data.toString();
   });
 
   ytdlp.on('close', (code) => {
-    if (code !== 0) {
-      return res.status(500).json({
-        status: false,
-        message: 'Gagal download audio',
-        error: stderrData.trim(),
-      });
-    }
+    const mp3Exists = fs.existsSync(outputPath);
+    const tmpFiles = fs.readdirSync('/tmp');
 
-    if (!fs.existsSync(outputPath)) {
+    if (!mp3Exists) {
       return res.status(500).json({
         status: false,
         message: 'File audio tidak ditemukan setelah proses download.',
         debug: {
           outputPath,
-          stderr: stderrData.trim()
+          stderr: stderrData.trim(),
+          tmpFiles
         }
       });
     }
